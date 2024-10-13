@@ -1,3 +1,4 @@
+require('dotenv').config();
 const express = require("express");
 const bodyParser = require("body-parser");
 const cors = require("cors");
@@ -11,9 +12,8 @@ app.use(cors());
 app.use(bodyParser.json());
 
 // GPT and Maps API keys
-const GPT_API_KEY =
-  "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";
-const MAPS_API_KEY = "AIzaSyC4cCmQZbKylUvOFhg0Fbh1qZPgchJuXzs";
+const GPT_API_KEY = process.env.GPT_API_KEY;
+const MAPS_API_KEY = process.env.MAPS_API_KEY;
 
 // Helper function to call GPT
 async function callGPT(prompt) {
@@ -62,7 +62,7 @@ async function coorsToAddress(latitude, longitude) {
     `https://maps.googleapis.com/maps/api/geocode/json?latlng=${latitude},${longitude}&key=${MAPS_API_KEY}`
   );
 
-  if(response.data.results[0].address_components === null) return "me";
+  if (response.data.results[0].address_components === null) return "me";
 
   response.data.results[0].address_components.forEach((component) => {
     if ("neighborhood" in component.types) {
@@ -95,7 +95,7 @@ async function searchNearby(lat, lng, primaryTypes) {
               latitude: lat,
               longitude: lng,
             },
-            radius: 2000,
+            radius: 3000,
           },
         },
         includedTypes: [type],
@@ -122,13 +122,39 @@ async function searchNearby(lat, lng, primaryTypes) {
   return places;
 }
 
+app.get("/api/placePhoto", async (req, res) => {
+  try {
+    const { photoReference } = req.query;
+
+    if (!photoReference) {
+      return res.status(400).json({ error: "Missing photo reference" });
+    }
+
+    // Construct the Google Places photo URL
+    const photoUrl = `https://places.googleapis.com/v1/${photoReference}/media?max_height_px=1000&key=${MAPS_API_KEY}`;
+
+    // Send the photo URL as the response
+    res.json({ url: photoUrl });
+  } catch (error) {
+    console.error("Error fetching place photo:", error);
+    res.status(500).json({
+      url: "https://via.placeholder.com/100", // Fallback placeholder image
+      error: "Error fetching place photo",
+    });
+  }
+});
+
 app.post("/api/sendPrompt", async (req, res) => {
+  console.log("Request: /api/sendPrompt");
   try {
     const { prompt, currentLocation, latitude, longitude } = req.body;
     let address = null;
     let lat = null;
     let lon = null;
 
+
+    console.log("Request: /api/sendPrompt");
+    
     console.log("Request: /api/sendPrompt");
     console.log(`Using current location: ${currentLocation ? "Yes" : "No"}`);
 
