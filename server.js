@@ -35,8 +35,9 @@ async function callGPT(prompt) {
 
 // Helper function to call Google Maps API
 async function searchText(keyword, address) {
-  let textQuery = `${keyword} ${address}`;
-  console.log(`Looking for keyswords (${keyword}) near ${address}`);
+  keyword = keyword.replaceAll(",", "");
+  let textQuery = `${keyword} near ${address}`;
+  console.log(`Looking for keywords (${keyword}) near ${address}`);
   const response = await axios.post(
     "https://places.googleapis.com/v1/places:searchText",
     {
@@ -47,7 +48,7 @@ async function searchText(keyword, address) {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": MAPS_API_KEY,
         "X-Goog-FieldMask":
-          "places.id,places.googleMapsUri,places.displayName,places.formattedAddress,places.rating,places.currentOpeningHours,places.photos,places.primaryTypeDisplayName,places.userRatingCount",
+          "places.id,places.googleMapsUri,places.displayName,places.websiteUri,places.shortFormattedAddress,places.rating,places.currentOpeningHours,places.photos,places.primaryTypeDisplayName,places.userRatingCount",
       },
     }
   );
@@ -105,7 +106,7 @@ async function searchNearby(lat, lng, primaryTypes) {
           "Content-Type": "application/json",
           "X-Goog-Api-Key": MAPS_API_KEY,
           "X-Goog-FieldMask":
-            "places.id,places.googleMapsUri,places.displayName,places.formattedAddress,places.rating,places.currentOpeningHours,places.photos,places.primaryTypeDisplayName,places.userRatingCount",
+            "places.id,places.googleMapsUri,places.displayName,places.websiteUri,places.shortFormattedAddress,places.rating,places.currentOpeningHours,places.photos,places.primaryTypeDisplayName,places.userRatingCount",
         },
       }
     );
@@ -120,6 +121,27 @@ async function searchNearby(lat, lng, primaryTypes) {
   }
 
   return places;
+}
+
+function makePlacesPrompt(places) {
+  places.map((place) => {
+    return `
+    <PLACE>
+      <NAME> ${place.displayName.text} </NAME>
+      <TYPE> ${
+        place.primaryTypeDisplayName ? place.primaryTypeDisplayName.text : "?"
+      } </TYPE>
+      <WEBSITEURL> ${place.websiteUri} </WEBSITEURL>
+      <OPENNOW> ${
+        place.currentOpeningHours
+          ? place.currentOpeningHours.openNow
+            ? "Open Now"
+            : "Closed"
+          : "?"
+      } </OPENNOW>
+      <RATING> ${place.rating} </RATING>
+    </PLACE>`.trim()
+  }).join("\n");
 }
 
 app.get("/api/placePhoto", async (req, res) => {
@@ -147,11 +169,10 @@ app.get("/api/placePhoto", async (req, res) => {
 app.post("/api/sendPrompt", async (req, res) => {
   console.log("Request: /api/sendPrompt");
   try {
-    const { prompt, currentLocation, latitude, longitude } = req.body;
+    const { prompt, currentLocation, latitude, longitude, preferences } = req.body;
     let address = null;
     let lat = null;
     let lon = null;
-
 
     console.log("Request: /api/sendPrompt");
     
@@ -249,6 +270,8 @@ app.post("/api/sendPrompt", async (req, res) => {
     });
 
     console.log(`Total: ${allPlaces.length}`);
+
+    let placesString = makePlacesPrompt(allPlaces);
 
     res.json({ success: true, places: allPlaces });
   } catch (error) {
