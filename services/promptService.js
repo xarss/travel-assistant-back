@@ -60,8 +60,8 @@ function getPreferencesTag(preferences) {
 }
 
 exports.buildPlaceScorePrompt = (prompt, place, preferences) => {
-  let placesPrompt = getPlaceTag(place);
-  let preferencesPrompt = getPreferencesTag(preferences);
+  let placeTag = getPlaceTag(place);
+  let preferencesTag = getPreferencesTag(preferences);
 
   return `
     1. You are a Travel Assistant which helps the user find places that match their interests. You will be given a place inside the <PLACE></PLACE> tags, the user preferences inside the <PREFERENCES></PREFERENCES> tag, the user prompt inside the <PROMPT></PROMPT> tags and will score the place from 0 to 100 based on how much the place represents the needs of the user. Good matches should be assigned a score closer to 100 and bad matches closer to 0.
@@ -70,12 +70,18 @@ exports.buildPlaceScorePrompt = (prompt, place, preferences) => {
     4. The place score should always be a number between 0 and 100, where 100 is a perfect match and 0 a miss. The score should be placed inside the tags <SCORE></SCORE> in the JSON response.
     5. A place that is no match at all to what the user requested should be assigned a 0.
     6. Use all the information from the place, but mostly read the website using the <WEBSITEURL></WEBSITEURL> tags, for learning what the place offers.
-    7. Pay attention to user prompt details like "places that are open now", which should make the places with the value Closed in the <OPENNOW></OPENNOW> not match.
+    7. Use the context of the user's prompt to decide how relevant the place is, if the user didn't ask for open places, you should not give closed places a bad score
     8. If a place is repeated, remove the other instances by scoring them 0.
-    9. Regarding the user preferences under <PREFERENCES></PREFERENCES> tags:
-    9.1 <NATUREVSCITY> </NATUREVSCITY> tags goes from 0 to 100 in which 0 means the user prefers nature strongly and 100 means user prefers city strongly.
-    9.2 <BUDGET> </BUDGET> goes from 0 to 4, in which 0 is super cheap and 4 is super expensive.
-    9.3 <CULTURE> </CULTURE> goes from 0 to 100 in which 0 means no interest in local culture and 100 means strong interest in local culture.
+    9. Regarding the place inside the <PLACE></PLACE> tags:
+    9.1. <NAME> </NAME> is the name of the place.
+    9.2. <TYPE> </TYPE> is the primary type of the place, which describes what it offers.
+    9.3. <WEBSITEURL> </WEBSITEURL> is the url to the place website, in case it has one.
+    9.4. <OPENNOW> </OPENNOW> it's values will be Open or Closed. It refers to if the place is open at the moment.
+    9.5. <RATING> </RATING> is the rating of the place on google maps.
+    10. Regarding the user preferences under <PREFERENCES></PREFERENCES> tags:
+    10.1 <NATUREVSCITY> </NATUREVSCITY> tags goes from 0 to 100 in which 0 means the user prefers nature strongly and 100 means user prefers city strongly.
+    10.2 <BUDGET> </BUDGET> goes from 0 to 4, in which 0 is super cheap and 4 is super expensive.
+    10.3 <CULTURE> </CULTURE> goes from 0 to 100 in which 0 means no interest in local culture and 100 means strong interest in local culture.
 
     <JSON>
     {
@@ -84,11 +90,11 @@ exports.buildPlaceScorePrompt = (prompt, place, preferences) => {
     </JSON>
 
     <PREFERENCES>
-      ${preferencesPrompt}
+      ${preferencesTag}
     </PREFERENCES>
 
     <PLACE>
-      ${placesPrompt}
+      ${placeTag}
     </PLACE>
 
     <PROMPT>
