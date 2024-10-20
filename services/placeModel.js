@@ -20,7 +20,7 @@ class Place {
     this.websiteUri = placeData.websiteUri || null;
     this.photoRef = placeData.photos?.[0]?.name || null;
 
-    this.score = null; // Initialize the score as null
+    this.score = null;
   }
 
   async calculateScore(prompt, preferences) {
@@ -28,7 +28,6 @@ class Place {
     const response = await callGPT(placeScorePrompt);
     const parsedResponse = JSON.parse(response);
     this.score = parseInt(parsedResponse.score);
-    // console.log(`${this.name} : ${this.score}`)
     return this.score;
   }
 }

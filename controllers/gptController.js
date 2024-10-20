@@ -6,9 +6,12 @@ const {
   searchNearby,
 } = require("../services/mapsService");
 const Place = require("../services/placeModel");
-const { buildLocationPrompt } = require("../services/promptService");
+const {
+  buildLocationPrompt,
+  buildPlaceOverviewPrompt,
+} = require("../services/promptService");
 
-exports.sendPrompt = async (req, res) => {
+exports.getPlaces = async (req, res) => {
   try {
     const { prompt, currentLocation, latitude, longitude, preferences } =
       req.body;
@@ -62,19 +65,17 @@ exports.sendPrompt = async (req, res) => {
       })
     );
 
-    const validPlaces = placeInstances.filter(
-      (place) => {
-        if(place === null) {
-          return false;
-        }
-
-        if(place.score === 0) {
-          return false;
-        }
-
-        return true;
+    const validPlaces = placeInstances.filter((place) => {
+      if (place === null) {
+        return false;
       }
-    );
+
+      if (place.score === 0) {
+        return false;
+      }
+
+      return true;
+    });
 
     if (validPlaces.length === 0) {
       res.json({
@@ -96,5 +97,27 @@ exports.sendPrompt = async (req, res) => {
     res
       .status(500)
       .send({ success: false, message: `Error: ${error.message}` });
+
+    console.log(error);
+  }
+};
+
+exports.getPlaceOverview = async (req, res) => {
+  try {
+    const { place } = req.body;
+
+    const prompt = buildPlaceOverviewPrompt(place);
+    const response = await callGPT(prompt);
+
+    res.json({
+      success: true,
+      message: response,
+    });
+  } catch (error) {
+    res
+      .status(500)
+      .send({ success: false, message: `Error: ${error.message}` });
+
+    console.log(error);
   }
 };
